@@ -1,0 +1,83 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider        = "prisma-client-js"
+    binaryTargets   = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
+    previewFeatures = ["fullTextSearch"]
+}
+
+datasource db {
+    provider = "mysql"
+    url      = "mysql://root:mysql@localhost:3306/notionproject"
+}
+
+// USER MODELS ------------------------------------------
+model User {
+    id            Int            @unique @default(autoincrement())
+    email         String         @unique
+    fname         String
+    lname         String
+    photoURL      String
+    password      String
+    collaboration Collaborator[]
+    ownedPages    Page[]
+    subscription  Subscription?
+}
+
+model Transaction {
+    id             Int          @unique @default(autoincrement())
+    paymentId      String
+    amount         Float
+    currency       String
+    createdAt      DateTime     @default(now())
+    subscriptionId Int
+    subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+}
+
+model Subscription {
+    id           Int           @unique @default(autoincrement())
+    startsAt     DateTime      @default(now())
+    userId       Int           @unique
+    user         User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    tier         Tier?
+    premiumPages Page[]
+    transactions Transaction[]
+}
+
+model Tier {
+    id             Int          @unique @default(autoincrement())
+    subscriptionId Int          @unique
+    subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    Tier_name      String
+    Tier_price     Int
+    validity_days  Int
+    createdAt      DateTime     @default(now())
+}
+
+model Page {
+    id                  Int            @unique @default(autoincrement())
+    title               String         @unique
+    content             String
+    page_type           String
+    publicURL           String?        @unique
+    parentPageId        Int?
+    parentPage          Page?          @relation("parent", fields: [parentPageId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    children            Page[]         @relation("parent")
+    creatorId           Int?
+    creator             User?          @relation(fields: [creatorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    subscribedCreatorId Int?
+    subscription        Subscription?  @relation(fields: [subscribedCreatorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    createdAt           DateTime       @default(now())
+    updatedAt           DateTime       @updatedAt
+    collaborators       Collaborator[]
+}
+
+model Collaborator {
+    id          Int      @unique @default(autoincrement())
+    userId      Int
+    user        User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    pageId      Int
+    page        Page     @relation(fields: [pageId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    joiningDate DateTime @default(now())
+}
